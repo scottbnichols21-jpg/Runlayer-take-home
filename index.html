@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acme Marketing Funnel</title>
+<meta name="description" content="How Acme marketing drives pipeline and revenue: 18 months of CRM data, cleaned and visualized.">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f6f6f3;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #7a7873;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --blue: #2a78d6;
+    --blue-dark: #1c5cab;
+    --blue-wash: #e8f1fc;
+    --gray-bar: #b9b7ae;
+    --good: #006300;
+    --bad: #b42d2d;
+    --warn-wash: #fdf5e6;
+    --radius: 10px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font); line-height: 1.5; }
+  body { -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { margin-bottom: 28px; }
+  .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--blue-dark); margin: 0 0 8px; }
+  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-2); margin: 0; max-width: 760px; }
+  .sub a { color: var(--blue-dark); }
+  h2 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.005em; }
+  .section-sub { color: var(--ink-2); margin: 0 0 18px; font-size: 15px; max-width: 760px; }
+  section { margin-top: 40px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+
+  /* KPI tiles */
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .kpi { padding: 16px; }
+  .kpi .label { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  .kpi .value { font-size: 28px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.1; }
+  .kpi .note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+  /* Takeaways */
+  .takeaways { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .take { display: flex; gap: 14px; }
+  .take .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--blue-wash); color: var(--blue-dark); font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .take h3 { font-size: 16px; margin: 2px 0 6px; line-height: 1.3; }
+  .take p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+  .take .so { margin-top: 8px; color: var(--ink); font-size: 14px; }
+  .take .so b { color: var(--blue-dark); }
+
+  /* Funnel */
+  .funnel-row { display: grid; grid-template-columns: 110px 1fr 120px; align-items: center; gap: 12px; padding: 6px 0; }
+  .funnel-row .stage { font-size: 14px; font-weight: 600; }
+  .funnel-row .bar-track { height: 30px; position: relative; }
+  .funnel-row .bar { height: 100%; border-radius: 0 4px 4px 0; min-width: 4px; }
+  .funnel-row .count { font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+  .funnel-row .count span { color: var(--muted); font-size: 12.5px; display: block; }
+  .step { grid-column: 2 / 3; font-size: 12.5px; color: var(--muted); padding-left: 2px; margin: -2px 0 -2px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .chart-title { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+  .chart-sub { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  .chart-box { position: relative; height: 340px; }
+  .chart-box.small { height: 220px; }
+
+  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink-2); margin: 0 0 10px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 9px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  th { font-size: 12.5px; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--axis); vertical-align: bottom; white-space: normal; min-width: 70px; }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr:hover { background: #f3f3ef; }
+  td.name { font-weight: 600; }
+  th:first-child, td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+  tbody tr:hover td:first-child { background: #f3f3ef; }
+  td .sub-name { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+  .inbar { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; width: 100%; }
+  .inbar .b { height: 8px; border-radius: 0 3px 3px 0; background: var(--blue); }
+  .hi { color: var(--good); font-weight: 600; }
+  .lo { color: var(--bad); font-weight: 600; }
+  .tfoot td { font-weight: 600; border-top: 1px solid var(--axis); border-bottom: none; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs button { font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tabs button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  details { margin-top: 16px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 15px; padding: 4px 0; }
+  summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* Data notes */
+  .notes { display: grid; gap: 10px; }
+  .note-item { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 14px 16px; }
+  .note-item h3 { font-size: 15px; margin: 0; }
+  .note-item .count { font-size: 13px; color: var(--muted); font-weight: 400; display: block; margin-top: 2px; }
+  .note-item p { margin: 0 0 4px; font-size: 14px; color: var(--ink-2); }
+  .note-item p.action { color: var(--ink); }
+  .note-item p.action::before { content: "Handled: "; font-weight: 600; }
+  .callout { background: var(--warn-wash); border: 1px solid #f1dfb8; border-radius: var(--radius); padding: 14px 16px; font-size: 14px; margin-top: 16px; }
+  dl.defs { display: grid; grid-template-columns: 160px 1fr; gap: 6px 16px; font-size: 14px; margin: 0; }
+  dl.defs dt { font-weight: 600; }
+  dl.defs dd { margin: 0; color: var(--ink-2); }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--grid); color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 960px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .wrap { padding: 24px 16px 48px; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .takeaways, .grid-2 { grid-template-columns: 1fr; }
+    .note-item { grid-template-columns: 1fr; gap: 6px; }
+    .funnel-row { grid-template-columns: 86px 1fr 84px; gap: 8px; }
+    dl.defs { grid-template-columns: 1fr; }
+    dl.defs dd { margin-bottom: 8px; }
+    .chart-box { height: 420px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Acme · Marketing performance review</p>
+    <h1>Where pipeline and revenue come from</h1>
+    <p class="sub" id="header-sub"></p>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>What leadership should know</h2>
+    <p class="section-sub">Four takeaways, in order of how much they should change what we do next.</p>
+    <div class="takeaways" id="takeaways"></div>
+  </section>
+
+  <section>
+    <h2>The funnel</h2>
+    <p class="section-sub">Every lead created in the period, and how far it got. Percentages under each bar are stage-to-stage conversion.</p>
+    <div class="card" id="funnel"></div>
+  </section>
+
+  <section>
+    <h2>Lead volume and revenue come from different places</h2>
+    <p class="section-sub">Each channel's share of all leads, next to its share of closed-won revenue. A channel that brings in more leads than revenue is filling the funnel without filling the bank.</p>
+    <div class="card">
+      <div class="legend">
+        <span><i style="background:var(--gray-bar)"></i>Share of leads</span>
+        <span><i style="background:var(--blue)"></i>Share of closed-won revenue</span>
+      </div>
+      <div class="chart-box"><canvas id="shareChart" aria-label="Share of leads versus share of revenue by channel" role="img"></canvas></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Channel scorecard</h2>
+    <p class="section-sub">The full picture per channel, sorted by revenue. Green and red mark rates at least 25% above or below the company average. Win rates for the smaller channels rest on only a handful of closed deals; hover a win rate to see the counts.</p>
+    <div class="card table-wrap"><table id="channelTable"></table></div>
+    <details>
+      <summary>Show all 20 campaigns</summary>
+      <div class="card table-wrap" style="margin-top:10px"><table id="campaignTable"></table></div>
+    </details>
+  </section>
+
+  <section>
+    <h2>Trends over time</h2>
+    <p class="section-sub">More leads have not turned into more opportunities. Lead volume is grouped by the quarter the lead was created; revenue by the quarter the deal closed.</p>
+    <div class="grid-3">
+      <div class="card">
+        <p class="chart-title">Leads created</p>
+        <p class="chart-sub">per quarter</p>
+        <div class="chart-box small"><canvas id="leadsQ" role="img" aria-label="Leads created per quarter"></canvas></div>
+      </div>
+      <div class="card">
+        <p class="chart-title">Lead → opportunity rate</p>
+        <p class="chart-sub">% of each quarter's leads that became an opportunity</p>
+        <div class="chart-box small"><canvas id="convQ" role="img" aria-label="Lead to opportunity rate per quarter"></canvas></div>
+      </div>
+      <div class="card">
+        <p class="chart-title">Closed-won revenue</p>
+        <p class="chart-sub">per quarter, by close date</p>
+        <div class="chart-box small"><canvas id="revQ" role="img" aria-label="Closed-won revenue per quarter"></canvas></div>
+      </div>
+    </div>
+    <p class="section-sub" style="margin-top:12px;font-size:13.5px">Q1 2025 revenue is low because the data starts in January 2025, so deals from earlier leads aren't in this export. The opportunity-rate trend is reliable: opportunities show up 11–68 days after the lead, and the data runs to mid-August 2026, so only the last few weeks of June leads could still add opportunities.</p>
+  </section>
+
+  <section>
+    <h2>Who buys</h2>
+    <p class="section-sub">Conversion and deal size by segment. Revenue per lead combines all three, so it's the best single measure of where a lead is worth the most.</p>
+    <div class="tabs" role="tablist" id="segTabs"></div>
+    <div class="card table-wrap"><table id="segTable"></table></div>
+  </section>
+
+  <section id="data-notes">
+    <h2>About the data</h2>
+    <p class="section-sub">The raw export needed cleanup before any of the numbers above could be trusted. Here is everything I changed, and everything I chose not to.</p>
+    <div class="notes" id="notes"></div>
+    <details>
+      <summary>The six corrected deal amounts</summary>
+      <div class="card table-wrap" style="margin-top:10px"><table id="amtTable"></table></div>
+    </details>
+    <div class="card" style="margin-top:16px">
+      <p class="chart-title" style="margin-bottom:10px">Definitions</p>
+      <dl class="defs">
+        <dt>Channel</dt><dd>Derived from the campaign field. The lead_source field had too many spellings to trust.</dd>
+        <dt>Lead → opp rate</dt><dd>Leads that got an opportunity ÷ all leads created.</dd>
+        <dt>Win rate</dt><dd>Closed won ÷ (closed won + closed lost). Open deals are excluded.</dd>
+        <dt>Revenue</dt><dd>Sum of closed-won deal amounts, after the 100× correction.</dd>
+        <dt>Revenue per lead</dt><dd>Closed-won revenue ÷ leads created. Captures volume, conversion and deal size in one number.</dd>
+        <dt>Open pipeline</dt><dd>Amounts on opportunities still in Discovery, Demo, Proposal or Negotiation.</dd>
+        <dt>Attribution</dt><dd>Single-touch: each lead's original campaign gets full credit for its deal.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <footer>
+    Built by Scott Nichols for the Runlayer Marketing Ops take-home. Source data: acme_marketing_funnel_data.csv (fictional CRM export). Cleaning logic: <code>scripts/clean.py</code>.
+  </footer>
+</div>
+
+<script src="vendor/chart.umd.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
