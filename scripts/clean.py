@@ -563,7 +563,8 @@ quality = [
         "count": None,
         "detail": (
             f"Every closed deal closed on or before {fmt_day(last_close)}, and the last lead was created {fmt_day(last_lead)}, "
-            f"but MQLs, SQLs and opportunities keep being recorded until {fmt_day(last_activity)}. Nothing closed in between, against about "
+            f"but pipeline activity keeps being recorded after that (last MQL {fmt_day(df.mql_date.max())}, last SQL "
+            f"{fmt_day(df.sql_date.max())}, last opportunity {fmt_day(df.opportunity_created_date.max())}). Nothing closed in between, against about "
             f"{pipeline['typical_closes_per_month']} closes a month before, even though {pipeline['past_due_at_last_activity_deals']} "
             f"open deals had expected close dates in that window."
         ),

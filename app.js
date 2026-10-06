@@ -105,6 +105,8 @@
   const web = ch("Webinar");
   const regions = [...D.segments.Region].sort((a, b) => a.win_rate - b.win_rate);
   const rLo = regions[0], rHi = regions[regions.length - 1];
+  const thin = [...D.segments.Region].sort((a, b) => a.won + a.lost - (b.won + b.lost)).slice(0, 2);
+  const thinText = list(thin.map((r) => `${r.name} (${r.won + r.lost})`));
   const atLeast = (p) => pv(p).replace("=", "≥");
   const caveats = [
     `<b>Webinar win rate.</b> Only ${N.webinar_won} of ${N.webinar_closed} closed webinar deals were won (${pct(web.win_rate, 0)}). Nearly all of the shortfall comes from leads created in H2 2025, which went ${N.webinar_h2_won} for ${N.webinar_h2_closed}; ` +
@@ -115,7 +117,7 @@
       `Its #${PS.revenue_rank} revenue rank rests on ${words(PS.corrected_deals)} of the ${words(nFixed)} corrected deals; without them it would rank #${PS.revenue_rank_if_excluded}. Worth a campaign-level review once spend is known.`,
     `<b>Region and industry.</b> Industry shows no difference in conversion or win rate (${atLeast(Math.min(T.industry_lead_to_opp, T.industry_win_rate))}). ` +
       `Region shows none in conversion (${pv(T.region_lead_to_opp)}); win rates run from ${pct(rLo.win_rate, 0)} (${rLo.name}, ${rLo.won} of ${rLo.won + rLo.lost}) to ${pct(rHi.win_rate, 0)} (${rHi.name}, ${rHi.won} of ${rHi.won + rHi.lost}), ` +
-      `a borderline spread (${pv(T.region_win_rate)}) resting on few deals outside North America. Company size changes deal size, not whether a deal is won (${pv(T.company_size_win_rate)}).`,
+      `a borderline spread (${pv(T.region_win_rate)}) resting on few closed deals in ${thinText}. Company size changes deal size, not whether a deal is won (${pv(T.company_size_win_rate)}).`,
     `<b>Sales reps.</b> Win rates across the ${words(N.reps)} reps range from ${N.rep_win_rate_range[0]}% to ${N.rep_win_rate_range[1]}%, which is within what chance produces on ${N.rep_closed_range[0]}–${N.rep_closed_range[1]} closed deals each (${pv(T.owner_win_rate)}).`,
   ];
   $("caveats").innerHTML = caveats.map((c) => `<li>${c}</li>`).join("");
@@ -215,7 +217,7 @@
     "Company size":
       `Bigger companies buy much bigger deals (avg ${money(sizes[0].avg_deal)} at ${sizes[0].name} employees, ${money(sizes[sizes.length - 1].avg_deal)} at ${sizes[sizes.length - 1].name}) but don't win more often (${pv(T.company_size_win_rate)}).` +
       (big ? ` ${big.name}-employee companies convert to opportunities about ${(big.lead_to_opp / big.lead_to_opp_rest).toFixed(1)}× as often as everyone else (${pct(big.lead_to_opp)} vs ${pct(big.lead_to_opp_rest)}).` : ""),
-    Region: `No regional difference in conversion is bigger than chance (${pv(T.region_lead_to_opp)}). Win rates vary more, but on few deals outside North America (${pv(T.region_win_rate)}).`,
+    Region: `No regional difference in conversion is bigger than chance (${pv(T.region_lead_to_opp)}). Win rates vary more, but the extremes rest on few closed deals in ${thinText} (${pv(T.region_win_rate)}).`,
     Industry: `No industry difference in conversion or win rate is bigger than chance (${atLeast(Math.min(T.industry_lead_to_opp, T.industry_win_rate))}). Shown for completeness.`,
   };
   const segNames = Object.keys(D.segments);
@@ -315,7 +317,7 @@
   new Chart($("shareChart"), {
     type: "bar",
     data: {
-      labels: chs.map((c) => c.name),
+      labels: chs.map((c) => (window.innerWidth < 500 && c.name.length > 12 ? c.name.split(" ") : c.name)),
       datasets: [
         { label: "Share of leads", data: chs.map((c) => c.share_leads), backgroundColor: "#8a887f", borderRadius: 4, borderSkipped: "start", barPercentage: 0.8, categoryPercentage: 0.7 },
         { label: "Share of closed-won revenue", data: chs.map((c) => c.share_revenue), backgroundColor: "#2a78d6", borderRadius: 4, borderSkipped: "start", barPercentage: 0.8, categoryPercentage: 0.7 },
@@ -325,7 +327,7 @@
       indexAxis: "y",
       scales: {
         x: { grid, border, ticks: { callback: (v) => v + "%", padding: 6, stepSize: 5, maxRotation: 0 }, max: shareMax },
-        y: { grid: noGrid, border, ticks: { color: "#0b0b0b", font: { size: 13 }, padding: 6 } },
+        y: { grid: { display: false, drawTicks: false }, border, ticks: { color: "#0b0b0b", font: { size: 13 }, padding: 6 } },
       },
       plugins: {
         tooltip: {

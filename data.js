@@ -1561,7 +1561,7 @@ window.DATA = {
   {
    "issue": "Two different cut-off dates",
    "count": null,
-   "detail": "Every closed deal closed on or before Jun 30, 2026, and the last lead was created Jun 29, 2026, but MQLs, SQLs and opportunities keep being recorded until Aug 17, 2026. Nothing closed in between, against about 14 closes a month before, even though 24 open deals had expected close dates in that window.",
+   "detail": "Every closed deal closed on or before Jun 30, 2026, and the last lead was created Jun 29, 2026, but pipeline activity keeps being recorded after that (last MQL Jul 18, 2026, last SQL Aug 14, 2026, last opportunity Aug 17, 2026). Nothing closed in between, against about 14 closes a month before, even though 24 open deals had expected close dates in that window.",
    "action": "Won, lost and revenue are reported as of Jun 30, 2026. Open pipeline includes the 19 opportunities created after that date. Worth asking the CRM owner whether later closes were left out of the export."
   },
   {
