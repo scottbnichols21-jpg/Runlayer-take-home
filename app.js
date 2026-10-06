@@ -33,7 +33,7 @@
   $("header-sub").innerHTML =
     `${num(D.meta.rows_clean)} leads created ${D.meta.lead_start}–${D.meta.lead_end}, followed through to closed deals. ` +
     `The raw CRM export needed cleanup first: duplicates, inconsistent labels, and ${words(nFixed)} deal amounts entered 100× too high. ` +
-    `<a href="#data-notes">See what changed</a>.`;
+    `<a href="#data-notes">See what changed</a> and <a href="#crm-fixes">what I'd fix in the CRM</a>.`;
   $("asof").innerHTML = [
     `Deal outcomes as of <b>${D.meta.last_close}</b>`,
     `Pipeline activity through <b>${D.meta.last_activity}</b>`,
@@ -257,6 +257,12 @@
     `Treat the expected close dates as forecasts to confirm with Sales.`;
   $("share-note").textContent =
     `Only the ends of this ranking are solid: Referral at the top, Paid Social and Content Syndication at the bottom. The channels in between are too close to rank.`;
+
+  // ---------- CRM fixes ----------
+  $("fixes").innerHTML = D.crm_fixes
+    .map((f, i) => `<div class="card fix"><div class="num">${i + 1}</div><div><h3>${f.title}</h3><p class="owner">Owner: ${f.owner}</p>` +
+      `<p>${f.problem}</p><p class="do">${f.fix}</p></div></div>`)
+    .join("");
 
   // ---------- data notes ----------
   $("notes").innerHTML = D.quality

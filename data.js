@@ -1589,6 +1589,44 @@ window.DATA = {
    "action": "Reported as-is. These are questions for the CRM owner, not things to guess at."
   }
  ],
+ "crm_fixes": [
+  {
+   "title": "Deal amounts wrong or missing",
+   "owner": "Sales Ops",
+   "problem": "Six closed-won amounts were 100× too high, so raw closed-won revenue reads $18.55M instead of $2.24M: off by 8× for anyone reporting straight from the CRM. Four more wins have no amount at all (three of them referrals), about $176K off the books.",
+   "fix": "Validation rules on Amount: required before a deal can move to Closed Won, and anything over $200K, or more than 10× the largest deal for that company size, needs manager approval. A weekly exception report catches what slips through."
+  },
+  {
+   "title": "No spend in the CRM",
+   "owner": "Marketing Ops + Finance",
+   "problem": "Nothing here can say cost per opportunity, CAC or ROI by channel, which is the next question leadership will ask about every takeaway on this page.",
+   "fix": "Load monthly spend per campaign (ad platforms, event invoices, syndication contracts) onto the campaign record, so cost per opportunity is a standard report by next quarter."
+  },
+  {
+   "title": "MQLs with no outcome",
+   "owner": "Marketing Ops + SDR lead",
+   "problem": "705 MQLs never became SQLs and 180 SQLs never became opportunities, and none has a rejected or recycled status. There's no way to tell whether Sales turned them down or never followed up.",
+   "fix": "An MQL follow-up SLA, a required reason whenever Sales rejects a lead, and automatic recycling to nurture after 30 days without progress (no MQL in this data advanced later than that)."
+  },
+  {
+   "title": "Expected close dates left to lapse",
+   "owner": "Sales Ops",
+   "problem": "24 open deals ($838K) passed their expected close date without closing, and the export has no closes at all after Jun 30, 2026.",
+   "fix": "A weekly past-due close-date report by owner, cleared before each forecast call. Before building it, confirm whether later closes are just missing from the export."
+  },
+  {
+   "title": "Lead source typed by hand",
+   "owner": "Marketing Ops",
+   "problem": "lead_source has 18 spellings of 8 channels, 40 leads have no UTM medium, and webinar leads are tagged 'email'.",
+   "fix": "Set lead source automatically from campaign and UTM through a picklist, lock manual edits, and publish a UTM naming convention that gives webinars their own medium."
+  },
+  {
+   "title": "Duplicates and no account key",
+   "owner": "Marketing Ops",
+   "problem": "15 duplicate rows got through (one carried an opportunity), and every one of the 300 company names appears under more than one industry, so leads can't be rolled up to accounts.",
+   "fix": "Duplicate rules on form fills and imports, plus lead-to-account matching by email domain, so account-level and multi-touch reporting become possible."
+  }
+ ],
  "corrected_amounts": [
   {
    "opportunity_id": "OPP-5257",

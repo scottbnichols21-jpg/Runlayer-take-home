@@ -153,6 +153,15 @@
   .note-item p { margin: 0 0 4px; font-size: 14px; color: var(--ink-2); }
   .note-item p.action { color: var(--ink); }
   .note-item p.action::before { content: "Handled: "; font-weight: 600; }
+  /* CRM fixes */
+  .fixes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .fix { display: flex; gap: 14px; }
+  .fix .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--warn-wash); color: #7a4f00; font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .fix h3 { font-size: 15.5px; margin: 2px 0 2px; line-height: 1.3; }
+  .fix .owner { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+  .fix p { margin: 0; font-size: 14px; color: var(--ink-2); }
+  .fix p.do { margin-top: 8px; color: var(--ink); }
+  .fix p.do::before { content: "Fix: "; font-weight: 600; }
   dl.defs { display: grid; grid-template-columns: 170px 1fr; gap: 6px 16px; font-size: 14px; margin: 0; }
   dl.defs dt { font-weight: 600; }
   dl.defs dd { margin: 0; color: var(--ink-2); }
@@ -170,7 +179,7 @@
   @media (max-width: 760px) {
     .wrap { padding: 24px 16px 48px; }
     .kpis { grid-template-columns: repeat(2, 1fr); }
-    .takeaways, .grid-2 { grid-template-columns: 1fr; }
+    .takeaways, .grid-2, .fixes { grid-template-columns: 1fr; }
     .note-item { grid-template-columns: 1fr; gap: 6px; }
     .funnel-row { grid-template-columns: 96px 1fr 84px; gap: 8px; }
     .funnel-row .stage { font-size: 13px; }
@@ -304,6 +313,12 @@
       <p class="swipe">Swipe the table sideways for more columns →</p>
       <div class="table-wrap"><table id="segTable" aria-label="Performance by segment" aria-live="polite"></table></div>
     </div>
+  </section>
+
+  <section id="crm-fixes">
+    <h2>What I'd fix in the CRM first</h2>
+    <p class="section-sub">Every data problem on this page is a process gap. These are the controls that would stop each one recurring, in rough order of how much it matters to the numbers leadership sees.</p>
+    <div class="fixes" id="fixes"></div>
   </section>
 
   <section id="data-notes">
