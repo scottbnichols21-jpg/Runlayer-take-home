@@ -67,12 +67,23 @@ def money(x):
     if abs(x) >= 1e6:
         return f"${x / 1e6:.2f}M"
     if abs(x) >= 1e4:
-        return f"${x / 1e3:.0f}K"
+        k = x / 1e3
+        return f"${k:.0f}K" if k == int(k) else f"${k:.1f}K"
     return f"${x:,.0f}"
 
 
-def pct(a, b, d=1):
+def pct(a, b, d=4):
+    """Percent, stored unrounded (4 dp) so the page rounds exactly once."""
     return round(a / b * 100, d) if b else None
+
+
+def words(n):
+    return ["no", "one", "two", "three", "four", "five", "six"][n] if 0 <= n <= 6 else f"{n:,}"
+
+
+def sig(p):
+    """p-value to two significant figures."""
+    return float(f"{p:.2g}")
 
 
 def fisher_p(a_yes, a_n, b_yes, b_n):
@@ -115,6 +126,7 @@ closed = is_won | is_lost
 
 # Export timing: deal outcomes stop at one date, funnel activity runs past it.
 last_close = df.loc[closed, "close_date"].max()
+last_lead = df.created_date.max()
 last_activity = df[["mql_date", "sql_date", "opportunity_created_date"]].max().max()
 assert df.loc[is_open, "close_date"].min() > last_close, "an open deal has a close date before the last outcome"
 
@@ -248,7 +260,14 @@ for r in revenue_by_q:
 open_df = df[is_open]
 pipeline_by_month = []
 for m, g in open_df.groupby(open_df.close_date.dt.to_period("M")):
-    pipeline_by_month.append({"month": f"{m.to_timestamp():%b %Y}", "amount": float(g.amount.sum()), "deals": len(g)})
+    due = g.close_date <= last_activity
+    pipeline_by_month.append({
+        "month": f"{m.to_timestamp():%b %Y}",
+        "amount": float(g.amount.sum()),
+        "deals": len(g),
+        "overdue_amount": float(g.loc[due, "amount"].sum()),
+        "overdue_deals": int(due.sum()),
+    })
 open_at_cutoff = open_df[open_df.opportunity_created_date <= last_close]
 open_after_cutoff = open_df[open_df.opportunity_created_date > last_close]
 past_due = open_df[open_df.close_date <= last_activity]
@@ -267,14 +286,9 @@ pipeline = {
 }
 
 # ---------------------------------------------------------------- takeaways
-def group_counts(mask):
-    g, rest = df[mask], df[~mask]
-    return g, rest
-
-
 # 1. Referral
 ref = next(c for c in channels if c["name"] == "Referral")
-g, rest = group_counts(df.channel == "Referral")
+rest = df[df.channel != "Referral"]
 ref_rest_l2o = pct(rest.opportunity_id.notna().sum(), len(rest))
 ref_win_p = fisher_p(ref["won"], ref["won"] + ref["lost"], int((rest.deal_stage == "Closed Won").sum()),
                      int(rest.deal_stage.isin(["Closed Won", "Closed Lost"]).sum()))
@@ -283,16 +297,24 @@ insight_referral = {
     "lead_to_opp_rest": ref_rest_l2o,
     "rev_per_lead_multiple": round(ref["rev_per_lead"] / K["rev_per_lead"], 1),
     "win_rate_rest": pct((rest.deal_stage == "Closed Won").sum(), rest.deal_stage.isin(["Closed Won", "Closed Lost"]).sum()),
-    "win_rate_p": round(ref_win_p, 2),
+    "win_rate_p": sig(ref_win_p),
     "unpriced_wins": int((unpriced.channel == "Referral").sum()),
     "unpriced_wins_total": len(unpriced),
 }
 
 # 2. Paid Social + Content Syndication
 weak = ["Paid Social", "Content Syndication"]
-g, rest = group_counts(df.channel.isin(weak))
+g, rest = df[df.channel.isin(weak)], df[~df.channel.isin(weak)]
+other_mkt = df[(df.source == MARKETING) & ~df.channel.isin(weak)]
 og = g[g.opportunity_id.notna()]
 open_weak = og[og.deal_stage.isin(OPEN_STAGES)].sort_values("amount", ascending=False)
+
+
+def stage_rates(frame):
+    mql, sql, opp = frame.mql_date.notna().sum(), frame.sql_date.notna().sum(), frame.opportunity_id.notna().sum()
+    return {"mql_rate": pct(mql, len(frame)), "mql_to_sql": pct(sql, mql), "sql_to_opp": pct(opp, sql)}
+
+
 insight_weak = {
     "channels": weak,
     "leads": len(g),
@@ -308,6 +330,10 @@ insight_weak = {
     "open_pipeline": float(open_weak.amount.sum()),
     "largest_open": float(open_weak.amount.iloc[0]),
     "largest_open_campaign": open_weak.campaign.iloc[0],
+    "largest_open_stage": open_weak.deal_stage.iloc[0],
+    "largest_open_age_days": int((last_activity - open_weak.opportunity_created_date.iloc[0]).days),
+    "stages": stage_rates(g),
+    "stages_other_marketing": stage_rates(other_mkt),
 }
 
 # 3. Events: the strongest marketing-run source on conversion
@@ -322,13 +348,13 @@ def yield_vs_rest(mask):
         "share_leads": pct(len(g), len(df)),
         "lead_to_opp": pct(go, len(g)),
         "lead_to_opp_rest": pct(ro, len(rest)),
-        "lead_to_opp_p": float(f"{fisher_p(go, len(g), ro, len(rest)):.2g}"),
+        "lead_to_opp_p": sig(fisher_p(go, len(g), ro, len(rest))),
         "won_per_100": pct(gw, len(g)),
         "won_per_100_rest": pct(rw, len(rest)),
-        "won_per_100_p": float(f"{fisher_p(gw, len(g), rw, len(rest)):.2g}"),
+        "won_per_100_p": sig(fisher_p(gw, len(g), rw, len(rest))),
         "win_rate": pct(gw, gc),
         "win_rate_rest": pct(rw, rc),
-        "win_rate_p": float(f"{fisher_p(gw, gc, rw, rc):.2g}"),
+        "win_rate_p": sig(fisher_p(gw, gc, rw, rc)),
     }
 
 
@@ -363,25 +389,58 @@ a, b = df[df.lead_half == "2025 H1"], df[df.lead_half == "2026 H1"]
 # Shift-share: H1 2026's leads converting at H1 2025's per-channel rates
 base_rates = a.groupby("channel").opportunity_id.apply(lambda s: s.notna().mean())
 mix_expected = float((b.channel.map(base_rates)).mean() * 100)
+# Where H1 2026 fell short of H1 2025's rates, stage by stage (the three parts add up to the gap)
+r0 = {k: h0[k] / 100 for k in ("mql_rate", "mql_to_sql", "sql_to_opp")}
+n_mql, n_sql = int(b.mql_date.notna().sum()), int(b.sql_date.notna().sum())
+shortfall = {
+    "at_mql": h2["leads"] * (r0["mql_rate"] - h2["mql_rate"] / 100) * r0["mql_to_sql"] * r0["sql_to_opp"],
+    "at_mql_to_sql": n_mql * (r0["mql_to_sql"] - h2["mql_to_sql"] / 100) * r0["sql_to_opp"],
+    "at_sql_to_opp": n_sql * (r0["sql_to_opp"] - h2["sql_to_opp"] / 100),
+}
+n_mql0, n_sql0 = int(a.mql_date.notna().sum()), int(a.sql_date.notna().sum())
+# Quarter-by-quarter: is any single pair of quarters different by more than chance?
+pair_ps = [
+    fisher_p(x["opps"], x["leads"], y["opps"], y["leads"])
+    for i, x in enumerate(quarters) for y in quarters[i + 1:]
+]
+later = df[df.lead_half != "2025 H1"]
+# Completeness: how many opportunities could the newest leads still produce?
+lags = (df.opportunity_created_date - df.created_date).dt.days.dropna()
+runway = int((last_activity - last_lead).days)
+late = df[df.created_date > last_activity - pd.Timedelta(days=int(lags.max()))]
+seen = np.array([(lags <= (last_activity - t).days).mean() for t in late.created_date])
 insight_growth = {
     "lead_growth": round((h2["leads"] / h0["leads"] - 1) * 100),
     "opp_growth": round((h2["opps"] / h0["opps"] - 1) * 100),
-    "p": round(fisher_p(h0["opps"], h0["leads"], h2["opps"], h2["leads"]), 2),
+    "p": sig(fisher_p(h0["opps"], h0["leads"], h2["opps"], h2["leads"])),
     "mix_expected": round(mix_expected, 1),
     "later_quarters_range": [min(q["lead_to_opp"] for q in quarters[2:]), max(q["lead_to_opp"] for q in quarters[2:])],
+    "later_rate": pct(later.opportunity_id.notna().sum(), len(later)),
+    "min_pair_p": sig(min(pair_ps)),
+    "shortfall_total": round(sum(shortfall.values())),
+    "shortfall": {k: round(v) for k, v in shortfall.items()},
+    "mql_to_sql_p": sig(fisher_p(n_sql0, n_mql0, n_sql, n_mql)),
+    "sql_to_opp_p": sig(fisher_p(h0["opps"], n_sql0, h2["opps"], n_sql)),
+    "runway_days": runway,
+    "share_opps_within_runway": pct((lags <= runway).sum(), len(lags)),
+    "expected_missing_opps": round(float((K["lead_to_opp"] / 100 * (1 - seen)).sum()), 1),
 }
 
-# Striking but not solid: kept off the headline list
+# Striking but not solid: kept off the headline list.
+# The webinar window was picked after looking at the data; the page says so.
+WEBINAR_WINDOW = ["2025Q3", "2025Q4"]
+in_window = df.loc[closed_df.index, "lead_q"].isin(WEBINAR_WINDOW)
 web_closed = closed_df[closed_df.channel == "Webinar"]
-web_h2 = web_closed[web_closed.created_date.dt.to_period("Q").astype(str).isin(["2025Q3", "2025Q4"])]
-web_other = web_closed.drop(web_h2.index)
-rest_other = closed_df[(closed_df.channel != "Webinar") & ~closed_df.index.isin(web_h2.index)]
-rest_other = rest_other[~rest_other.created_date.dt.to_period("Q").astype(str).isin(["2025Q3", "2025Q4"])]
+web_h2 = web_closed[in_window[web_closed.index]]
+web_other = web_closed[~in_window[web_closed.index]]
+rest_other = closed_df[(closed_df.channel != "Webinar") & ~in_window]
 insight_not_solid = {
     "webinar_won": int((web_closed.deal_stage == "Closed Won").sum()),
     "webinar_closed": len(web_closed),
     "webinar_h2_won": int((web_h2.deal_stage == "Closed Won").sum()),
     "webinar_h2_closed": len(web_h2),
+    "webinar_other_won": int((web_other.deal_stage == "Closed Won").sum()),
+    "webinar_other_closed": len(web_other),
     "webinar_other_win_rate": pct((web_other.deal_stage == "Closed Won").sum(), len(web_other)),
     "rest_other_win_rate": pct((rest_other.deal_stage == "Closed Won").sum(), len(rest_other)),
     "rep_win_rates": [
@@ -398,7 +457,7 @@ def chi2_p(frame, col, rate):
         hit = frame.deal_stage == "Closed Won"
     else:
         hit = frame.opportunity_id.notna()
-    return round(float(chi2_contingency(pd.crosstab(frame[col], hit))[1]), 2)
+    return sig(chi2_contingency(pd.crosstab(frame[col], hit))[1])
 
 
 heterogeneity = {
@@ -411,6 +470,26 @@ insight_not_solid["tests"] = heterogeneity
 insight_not_solid["reps"] = int(df.owner.nunique())
 rep_closed = closed_df.groupby("owner").size()
 insight_not_solid["rep_closed_range"] = [int(rep_closed.min()), int(rep_closed.max())]
+# Within each channel, do its campaigns differ? (smallest p across channels)
+within = [
+    chi2_p(df[df.channel == c], "campaign", rate)
+    for c in df.channel.unique() if df.loc[df.channel == c, "campaign"].nunique() > 1
+    for rate in ["lead_to_opp", "win_rate"]
+]
+insight_not_solid["campaign_within_channel_min_p"] = min(within)
+
+# Company size: the one segment cut with a significant conversion gap
+size_flagged = []
+for r in segments["Company size"]:
+    if "lead_to_opp" in r["flags"]:
+        g, rest = df[df.company_size == r["name"]], df[df.company_size != r["name"]]
+        size_flagged.append({
+            "name": r["name"],
+            "lead_to_opp": r["lead_to_opp"],
+            "lead_to_opp_rest": pct(rest.opportunity_id.notna().sum(), len(rest)),
+            "p": sig(fisher_p(int(g.opportunity_id.notna().sum()), len(g), int(rest.opportunity_id.notna().sum()), len(rest))),
+        })
+insight_size = {"flagged": size_flagged}
 
 # ---------------------------------------------------------------- data notes
 won_band_median = df[is_won & ~df.amount_corrected].groupby("company_size").amount.median()
@@ -428,6 +507,7 @@ corrected_amounts = [
 raw_closed_won = float(df.loc[is_won, "amount_raw"].sum())
 revenue_if_excluded = float(df.loc[is_won & ~df.amount_corrected, "amount"].sum())
 next_largest = float(df.loc[opp_rows & ~df.amount_corrected, "amount"].max())
+other_round = df[opp_rows & ~df.amount_corrected & (df.deal_amount_usd % 10_000 == 0)]
 unpriced_imputed = float(unpriced.company_size.map(won_band_median).sum())
 
 stalled_mql = df[df.mql_date.notna() & df.sql_date.isna()]
@@ -458,9 +538,11 @@ quality = [
         "detail": (
             f"Six closed-won deals between {money(corrected.amount_raw.min())} and {money(corrected.amount_raw.max())} made up "
             f"{money(corrected.amount_raw.sum())} of the {money(raw_closed_won)} raw closed-won total "
-            f"({corrected.amount_raw.sum() / raw_closed_won:.0%}). All six are exact multiples of $10,000, while every other amount is "
-            f"rounded to $100. The next-largest deal in the file is {money(next_largest)}. Divided by 100, each one falls inside "
-            f"the normal range for its company size, though most sit below the typical won deal."
+            f"({corrected.amount_raw.sum() / raw_closed_won:.0%}). All six are exact multiples of $10,000; only "
+            f"{words(len(other_round))} other amount in the file is (a {money(other_round.amount.iloc[0])} {other_round.deal_stage.iloc[0].lower()} deal), "
+            f"and every amount is rounded to $100. "
+            f"The next-largest deal in the file is {money(next_largest)}. Divided by 100, each one falls inside the range of deals "
+            f"for its company size, though all six sit below the median won deal for that size."
         ),
         "action": (
             f"Divided by 100 and flagged. If these six amounts were excluded instead, closed-won revenue would be "
@@ -473,15 +555,15 @@ quality = [
         "detail": f"{insight_referral['unpriced_wins']} of the {len(unpriced)} are referral deals.",
         "action": (
             f"Counted as wins, left out of revenue and average deal size. Valued at the typical won deal for their company size, "
-            f"they would add about {money(unpriced_imputed)}."
+            f"they would add about {money(round(unpriced_imputed, -3))}."
         ),
     },
     {
         "issue": "Two different cut-off dates",
         "count": None,
         "detail": (
-            f"Every closed deal closed on or before {fmt_day(last_close)}, but leads, MQLs, SQLs and opportunities keep "
-            f"appearing until {fmt_day(last_activity)}. Nothing closed in between, against about "
+            f"Every closed deal closed on or before {fmt_day(last_close)}, and the last lead was created {fmt_day(last_lead)}, "
+            f"but MQLs, SQLs and opportunities keep being recorded until {fmt_day(last_activity)}. Nothing closed in between, against about "
             f"{pipeline['typical_closes_per_month']} closes a month before, even though {pipeline['past_due_at_last_activity_deals']} "
             f"open deals had expected close dates in that window."
         ),
@@ -510,14 +592,18 @@ quality = [
         "detail": (
             f"{stale_mql:,} MQLs never became SQLs and {stale_sql} SQLs never became opportunities. {stale_old:,} of these "
             f"{stale_mql + stale_sql:,} have waited longer than any lead ever took to advance ({max_mql_to_sql} days MQL to SQL, "
-            f"{max_sql_to_opp} days SQL to opportunity), yet the export has no rejected or recycled status for them."
+            f"{max_sql_to_opp} days SQL to opportunity), yet the export has no rejected or recycled status for them. "
+            f"'Disqualified' is only ever used before MQL ({int((df.lead_status == 'Disqualified').sum())} leads)."
         ),
         "action": "Shown as 'did not advance', not as active pipeline. Worth checking whether Sales records a disposition anywhere.",
     },
     {
         "issue": "Missing industry and UTM medium",
         "count": int((df.industry == "Unknown").sum() + df.utm_medium.isna().sum() - ((df.industry == "Unknown") & df.utm_medium.isna()).sum()),
-        "detail": f"{int((df.industry == 'Unknown').sum())} leads have no industry and {int(df.utm_medium.isna().sum())} have no UTM medium. The gaps show no pattern.",
+        "detail": (
+            f"{int((df.industry == 'Unknown').sum())} leads have no industry and {int(df.utm_medium.isna().sum())} have no UTM medium "
+            f"({words(int(((df.industry == 'Unknown') & df.utm_medium.isna()).sum()))} lead is missing both). The gaps show no pattern."
+        ),
         "action": "Industry shown as 'Unknown'. UTM medium isn't used: channel comes from campaign, and webinars are tagged 'email'.",
     },
     {
@@ -570,6 +656,7 @@ DATA = {
         "paid_search": insight_paid_search,
         "growth": insight_growth,
         "not_solid": insight_not_solid,
+        "size": insight_size,
     },
     "quality": quality,
     "corrected_amounts": corrected_amounts,
@@ -577,10 +664,10 @@ DATA = {
     "revenue_if_excluded": revenue_if_excluded,
 }
 
-OUT_JS.write_text(
+OUT_JS.write_bytes((
     "// Generated by scripts/clean.py from data/acme_marketing_funnel_data.csv. Do not edit by hand.\n"
     "window.DATA = " + json.dumps(DATA, indent=1, ensure_ascii=False) + ";\n"
-)
+).encode("utf-8"))
 
 keep = ["lead_id", "created_date", "company", "industry", "company_size", "region", "country", "channel", "source",
         "campaign", "lead_source", "utm_medium", "lead_status", "mql_date", "sql_date", "opportunity_id",
@@ -588,6 +675,6 @@ keep = ["lead_id", "created_date", "company", "industry", "company_size", "regio
         "days_to_close"]
 out = df[keep].rename(columns={"lead_source": "lead_source_raw", "amount": "deal_amount_usd", "amount_raw": "deal_amount_usd_raw",
                                "days_to_close": "days_opp_to_close"})
-out.to_csv(OUT_CSV, index=False, date_format="%Y-%m-%d")
+out.to_csv(OUT_CSV, index=False, date_format="%Y-%m-%d", lineterminator="\n", encoding="utf-8")
 print(f"{len(raw):,} raw rows -> {len(df):,} leads. Closed-won revenue {money(total_rev)} "
       f"(raw {money(raw_closed_won)}). Wrote {OUT_JS.name} and {OUT_CSV.relative_to(ROOT)}.")
