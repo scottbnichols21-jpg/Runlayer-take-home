@@ -74,7 +74,7 @@
       tag: evidence(R.lead_to_opp_p, "Referral lead → opportunity rate vs all other leads (Fisher exact)"),
       body: `${pct(ref.lead_to_opp, 0)} of referral leads become opportunities, against ${pct(R.lead_to_opp_rest, 0)} of all other leads. ` +
             `Each referral lead is worth ${money(ref.rev_per_lead)} in closed-won revenue, about ${R.rev_per_lead_multiple}× the average lead. ` +
-            `The edge is in conversion, not closing: referral deals win ${pct(ref.win_rate, 0)} of the time against ${pct(R.win_rate_rest, 0)} for everything else, a gap too small to rule out chance. ` +
+            `The edge is in conversion, not closing: referral deals win ${pct(ref.win_rate, 0)} of the time against ${pct(R.win_rate_rest, 0)} for everything else, but on ${ref.won + ref.lost} closed referral deals that gap could be chance. ` +
             `Revenue is also understated: ${words(R.unpriced_wins)} of the ${words(R.unpriced_wins_total)} won deals with no amount recorded are referrals.`,
       so: `Referral is the highest-yield source per lead. Whether it's the best place for the next dollar depends on what the program costs, which this export doesn't include, and on how many more referrals customers and partners can realistically produce.`,
     },
@@ -106,7 +106,7 @@
             `about ${G.shortfall.at_sql_to_opp} at SQL → opportunity and ${G.shortfall.at_mql_to_sql} at MQL → SQL. ` +
             `The overall gap is borderline and neither stage stands out on its own, so treat it as a signal to check, not a proven decline.`,
       so: `Before setting the next lead-volume target, review both handoffs with Sales: which MQLs get accepted as SQLs, and why accepted SQLs don't become opportunities. ` +
-          `${num(S.mql)} MQLs never got a recorded decision, and ${S.mql_unowned === S.mql ? "none of them" : `only ${num(S.mql - S.mql_unowned)} of them`} was ever assigned an owner.`,
+          `${num(S.mql)} MQLs never got a recorded decision, and ${S.mql_unowned === S.mql ? "none of them" : `only ${num(S.mql - S.mql_unowned)} of them`} has an owner on record.`,
     },
   ];
   $("takeaways").innerHTML = takeaways

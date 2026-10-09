@@ -517,7 +517,7 @@ stalled_sql = df[df.sql_date.notna() & df.opportunity_id.isna()]
 max_mql_to_sql = int((df.sql_date - df.mql_date).dt.days.max())
 max_sql_to_opp = int((df.opportunity_created_date - df.sql_date).dt.days.max())
 stale_mql, stale_sql = len(stalled_mql), len(stalled_sql)
-# Owner is only ever filled in once a lead reaches SQL, so stalled MQLs were never assigned to anyone.
+# Owner is only ever filled in once a lead reaches SQL, so no stalled MQL has an owner on record.
 mql_unowned = int(stalled_mql.owner.isna().sum())
 owner_only_from_sql = bool(df.loc[df.sql_date.notna(), "owner"].notna().all() and df.loc[df.sql_date.isna(), "owner"].isna().all())
 assert owner_only_from_sql, "owner assignment no longer starts at SQL; revisit the stalled-MQL wording"
@@ -602,8 +602,8 @@ quality = [
             f"{stale_mql:,} MQLs never became SQLs and {stale_sql} SQLs never became opportunities. {stale_old:,} of these "
             f"{stale_mql + stale_sql:,} have waited longer than any lead ever took to advance ({max_mql_to_sql} days MQL to SQL, "
             f"{max_sql_to_opp} days SQL to opportunity), yet the export has no rejected or recycled status for them. "
-            f"Owner is only filled in once a lead reaches SQL, so {unowned_text} of the {stale_mql:,} stalled MQLs was ever assigned "
-            f"to anyone. 'Disqualified' is only ever used before MQL ({int((df.lead_status == 'Disqualified').sum())} leads)."
+            f"Owner is only filled in once a lead reaches SQL, so {unowned_text} of the {stale_mql:,} stalled MQLs has an owner "
+            f"on record. 'Disqualified' is only ever used before MQL ({int((df.lead_status == 'Disqualified').sum())} leads)."
         ),
         "action": (
             "Shown as 'did not advance', not as active pipeline. Worth checking how MQLs are routed, and whether Sales records "
@@ -667,8 +667,9 @@ crm_fixes = [
         "owner": "Marketing Ops + SDR lead",
         "problem": (
             f"{stale_mql:,} MQLs never became SQLs and {stale_sql} SQLs never became opportunities, and none has a rejected or "
-            f"recycled status. Owner is only filled in at SQL, so {unowned_text} of the {stale_mql:,} stalled MQLs was ever "
-            f"assigned to a person. That looks like a routing gap more than Sales turning them down."
+            f"recycled status. Owner is only filled in at SQL, so {unowned_text} of the {stale_mql:,} stalled MQLs has an owner "
+            f"on record. The export can't show whether Sales looked at them and passed or never picked them up, but no one is "
+            f"on record as accountable for them."
         ),
         "fix": (
             f"Assign an owner the moment a lead becomes an MQL, then an MQL follow-up SLA, a required reason whenever Sales "

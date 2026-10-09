@@ -19,7 +19,7 @@ Every data problem in the export is a process gap. The page includes a section w
 
 1. **Deal amounts wrong or missing:** amount required at Closed Won; approval above $200K or 10× the size band's largest deal.
 2. **No spend in the CRM:** monthly spend per campaign on the campaign record, so cost per opportunity is a standard report.
-3. **MQLs with no outcome:** none of the 705 stalled MQLs was ever assigned an owner (owner starts at SQL). Assign an owner at MQL, then a follow-up SLA, a required rejection reason, and auto-recycle after 30 days without progress.
+3. **MQLs with no outcome:** none of the 705 stalled MQLs has an owner on record (owner starts at SQL). Assign an owner at MQL, then a follow-up SLA, a required rejection reason, and auto-recycle after 30 days without progress.
 4. **Expected close dates left to lapse:** weekly past-due close-date report by owner before each forecast call.
 5. **Lead source typed by hand:** picklist set from campaign/UTM, locked edits, a UTM naming convention.
 6. **Duplicates and no account key:** duplicate rules on forms and imports; lead-to-account matching by domain.
