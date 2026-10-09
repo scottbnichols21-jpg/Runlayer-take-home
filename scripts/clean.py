@@ -295,6 +295,7 @@ ref_win_p = fisher_p(ref["won"], ref["won"] + ref["lost"], int((rest.deal_stage 
 unpriced = df[is_won & df.amount.isna()]
 insight_referral = {
     "lead_to_opp_rest": ref_rest_l2o,
+    "lead_to_opp_p": sig(fisher_p(ref["opps"], ref["leads"], int(rest.opportunity_id.notna().sum()), len(rest))),
     "rev_per_lead_multiple": round(ref["rev_per_lead"] / K["rev_per_lead"], 1),
     "win_rate_rest": pct((rest.deal_stage == "Closed Won").sum(), rest.deal_stage.isin(["Closed Won", "Closed Lost"]).sum()),
     "win_rate_p": sig(ref_win_p),
@@ -324,6 +325,7 @@ insight_weak = {
     "opps": len(og),
     "lead_to_opp": pct(len(og), len(g)),
     "lead_to_opp_rest": pct(rest.opportunity_id.notna().sum(), len(rest)),
+    "lead_to_opp_p": sig(fisher_p(len(og), len(g), int(rest.opportunity_id.notna().sum()), len(rest))),
     "won": int((og.deal_stage == "Closed Won").sum()),
     "closed": int(og.deal_stage.isin(["Closed Won", "Closed Lost"]).sum()),
     "revenue": float(og.loc[og.deal_stage == "Closed Won", "amount"].sum()),
@@ -515,6 +517,12 @@ stalled_sql = df[df.sql_date.notna() & df.opportunity_id.isna()]
 max_mql_to_sql = int((df.sql_date - df.mql_date).dt.days.max())
 max_sql_to_opp = int((df.opportunity_created_date - df.sql_date).dt.days.max())
 stale_mql, stale_sql = len(stalled_mql), len(stalled_sql)
+# Owner is only ever filled in once a lead reaches SQL, so stalled MQLs were never assigned to anyone.
+mql_unowned = int(stalled_mql.owner.isna().sum())
+owner_only_from_sql = bool(df.loc[df.sql_date.notna(), "owner"].notna().all() and df.loc[df.sql_date.isna(), "owner"].isna().all())
+assert owner_only_from_sql, "owner assignment no longer starts at SQL; revisit the stalled-MQL wording"
+unowned_text = "none" if mql_unowned == stale_mql else f"only {stale_mql - mql_unowned:,}"
+insight_stalled = {"mql": stale_mql, "sql": stale_sql, "mql_unowned": mql_unowned}
 stale_old = int(((last_activity - stalled_mql.mql_date).dt.days > max_mql_to_sql).sum()
                 + ((last_activity - stalled_sql.sql_date).dt.days > max_sql_to_opp).sum())
 med_l2c = closed_df.close_date.sub(closed_df.created_date).dt.days
@@ -594,9 +602,13 @@ quality = [
             f"{stale_mql:,} MQLs never became SQLs and {stale_sql} SQLs never became opportunities. {stale_old:,} of these "
             f"{stale_mql + stale_sql:,} have waited longer than any lead ever took to advance ({max_mql_to_sql} days MQL to SQL, "
             f"{max_sql_to_opp} days SQL to opportunity), yet the export has no rejected or recycled status for them. "
-            f"'Disqualified' is only ever used before MQL ({int((df.lead_status == 'Disqualified').sum())} leads)."
+            f"Owner is only filled in once a lead reaches SQL, so {unowned_text} of the {stale_mql:,} stalled MQLs was ever assigned "
+            f"to anyone. 'Disqualified' is only ever used before MQL ({int((df.lead_status == 'Disqualified').sum())} leads)."
         ),
-        "action": "Shown as 'did not advance', not as active pipeline. Worth checking whether Sales records a disposition anywhere.",
+        "action": (
+            "Shown as 'did not advance', not as active pipeline. Worth checking how MQLs are routed, and whether Sales records "
+            "a disposition anywhere."
+        ),
     },
     {
         "issue": "Missing industry and UTM medium",
@@ -655,11 +667,13 @@ crm_fixes = [
         "owner": "Marketing Ops + SDR lead",
         "problem": (
             f"{stale_mql:,} MQLs never became SQLs and {stale_sql} SQLs never became opportunities, and none has a rejected or "
-            f"recycled status. There's no way to tell whether Sales turned them down or never followed up."
+            f"recycled status. Owner is only filled in at SQL, so {unowned_text} of the {stale_mql:,} stalled MQLs was ever "
+            f"assigned to a person. That looks like a routing gap more than Sales turning them down."
         ),
         "fix": (
-            f"An MQL follow-up SLA, a required reason whenever Sales rejects a lead, and automatic recycling to nurture after "
-            f"{max_mql_to_sql} days without progress (no MQL in this data advanced later than that)."
+            f"Assign an owner the moment a lead becomes an MQL, then an MQL follow-up SLA, a required reason whenever Sales "
+            f"rejects a lead, and automatic recycling to nurture after {max_mql_to_sql} days without progress (no MQL in this "
+            f"data advanced later than that)."
         ),
     },
     {
@@ -742,6 +756,7 @@ DATA = {
         "growth": insight_growth,
         "not_solid": insight_not_solid,
         "size": insight_size,
+        "stalled": insight_stalled,
     },
     "quality": quality,
     "crm_fixes": crm_fixes,

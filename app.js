@@ -60,26 +60,36 @@
   const ref = ch("Referral"), R = I.referral, E = I.events, W = I.weak, PS = I.paid_search, G = I.growth;
   const h0 = D.halves["2025 H1"], h2 = D.halves["2026 H1"];
   const WS = W.stages, WO = W.stages_other_marketing;
-  const stalledMql = D.funnel[1].n - D.funnel[2].n;
+  const S = I.stalled;
+  // Plain-language evidence tags for the takeaway cards; the p-value stays in the hover text.
+  const evidence = (p, test) => {
+    const [cls, label] = p < 0.01 ? ["solid", "Solid evidence"] : p < 0.1 ? ["borderline", "Borderline evidence"] : ["chance", "Could be chance"];
+    return `<span class="tag ${cls}" title="${test}, ${pv(p)}">${label}</span>`;
+  };
+  $("headline").textContent =
+    `Referrals and events convert best. ${list(W.channels)} bring ${pct(W.share_leads, 0)} of leads and ${plural(W.won, "won deal", "won deals")}.`;
   const takeaways = [
     {
       title: `Referrals are ${pct(ref.share_leads)} of leads but ${pct(ref.share_revenue, 0)} of revenue`,
+      tag: evidence(R.lead_to_opp_p, "Referral lead → opportunity rate vs all other leads (Fisher exact)"),
       body: `${pct(ref.lead_to_opp, 0)} of referral leads become opportunities, against ${pct(R.lead_to_opp_rest, 0)} of all other leads. ` +
             `Each referral lead is worth ${money(ref.rev_per_lead)} in closed-won revenue, about ${R.rev_per_lead_multiple}× the average lead. ` +
-            `The edge is in conversion, not closing: referral deals win ${pct(ref.win_rate, 0)} of the time against ${pct(R.win_rate_rest, 0)} for everything else, a gap chance could explain (${pv(R.win_rate_p)}). ` +
+            `The edge is in conversion, not closing: referral deals win ${pct(ref.win_rate, 0)} of the time against ${pct(R.win_rate_rest, 0)} for everything else, a gap too small to rule out chance. ` +
             `Revenue is also understated: ${words(R.unpriced_wins)} of the ${words(R.unpriced_wins_total)} won deals with no amount recorded are referrals.`,
       so: `Referral is the highest-yield source per lead. Whether it's the best place for the next dollar depends on what the program costs, which this export doesn't include, and on how many more referrals customers and partners can realistically produce.`,
     },
     {
       title: `Events turn leads into opportunities at twice the rate of other leads`,
-      body: `Events are ${pct(E.share_leads)} of leads and ${pct(E.share_revenue, 0)} of revenue. ${pct(E.lead_to_opp)} of event leads become opportunities, against ${pct(E.lead_to_opp_rest)} for all other leads (${pv(E.lead_to_opp_p)}), ` +
+      tag: evidence(E.lead_to_opp_p, "Event lead → opportunity rate vs all other leads (Fisher exact)"),
+      body: `Events are ${pct(E.share_leads)} of leads and ${pct(E.share_revenue, 0)} of revenue. ${pct(E.lead_to_opp)} of event leads become opportunities, against ${pct(E.lead_to_opp_rest)} for all other leads, ` +
             `and that holds for all ${words(E.programs)} event programs (${E.program_lead_to_opp_range[0].toFixed(1)}–${pct(E.program_lead_to_opp_range[1])}). ` +
             `They produce ${E.won_per_100.toFixed(1)} won deals per 100 leads, against ${E.won_per_100_rest.toFixed(1)} elsewhere. ` +
-            `As with referrals, the edge is in conversion: the ${pct(E.win_rate, 0)} win rate isn't reliably higher than the ${pct(E.win_rate_rest, 0)} elsewhere (${pv(E.win_rate_p)}).`,
+            `As with referrals, the edge is in conversion: the ${pct(E.win_rate, 0)} win rate isn't reliably higher than the ${pct(E.win_rate_rest, 0)} elsewhere.`,
       so: `Events are the strongest source marketing fully controls. Whether to add more depends on cost per opportunity, which this export can't show; event spend is the first number to pull.`,
     },
     {
       title: `${list(W.channels)}: ${pct(W.share_leads, 0)} of leads, ${plural(W.won, "won deal", "won deals")}`,
+      tag: evidence(W.lead_to_opp_p, "Lead → opportunity rate vs every other channel (Fisher exact)"),
       body: `${num(W.leads)} leads produced ${W.opps} opportunities (${pct(W.lead_to_opp)}, against ${pct(W.lead_to_opp_rest)} for every other channel) and ${plural(W.won, "won deal", "won deals")} worth ${money(W.revenue)}. ` +
             `They fall behind at every stage: ${pct(WS.mql_rate, 0)} become MQLs (${pct(WO.mql_rate, 0)} for other marketing programs), ${pct(WS.mql_to_sql, 0)} of those MQLs become SQLs (${pct(WO.mql_to_sql, 0)}), ` +
             `and ${pct(WS.sql_to_opp, 0)} of SQLs become opportunities (${pct(WO.sql_to_opp, 0)}). ` +
@@ -88,17 +98,19 @@
     },
     {
       title: `Leads grew ${G.lead_growth}%; opportunities from those leads grew ${G.opp_growth}%`,
+      tag: evidence(G.p, "H1 2025 vs H1 2026 lead → opportunity rate (Fisher exact)"),
       body: `Leads created in H1 2026 vs H1 2025: ${num(h0.leads)} → ${num(h2.leads)}, and their opportunities ${h0.opps} → ${h2.opps}. ` +
             `Lead → opportunity was ${pct(h0.lead_to_opp)} in H1 2025 and ${G.later_quarters_range[0].toFixed(1)}–${pct(G.later_quarters_range[1])} in every quarter since. ` +
             `Channel mix didn't cause it: at H1 2025's channel rates, H1 2026's leads would have converted at ${pct(G.mix_expected)}. ` +
             `The MQL rate barely moved (${pct(h0.mql_rate, 0)} → ${pct(h2.mql_rate, 0)}). Against H1 2025's stage rates, H1 2026 came up about ${G.shortfall_total} opportunities short, mostly after MQL: ` +
             `about ${G.shortfall.at_sql_to_opp} at SQL → opportunity and ${G.shortfall.at_mql_to_sql} at MQL → SQL. ` +
-            `The overall gap is borderline (${pv(G.p)}) and neither stage is significant on its own, so treat it as a signal to check, not a proven decline.`,
-      so: `Before setting the next lead-volume target, review both handoffs with Sales: which MQLs get accepted as SQLs, and why accepted SQLs don't become opportunities. ${num(stalledMql)} MQLs never got a recorded decision at all.`,
+            `The overall gap is borderline and neither stage stands out on its own, so treat it as a signal to check, not a proven decline.`,
+      so: `Before setting the next lead-volume target, review both handoffs with Sales: which MQLs get accepted as SQLs, and why accepted SQLs don't become opportunities. ` +
+          `${num(S.mql)} MQLs never got a recorded decision, and ${S.mql_unowned === S.mql ? "none of them" : `only ${num(S.mql - S.mql_unowned)} of them`} was ever assigned an owner.`,
     },
   ];
   $("takeaways").innerHTML = takeaways
-    .map((t, i) => `<div class="card take"><div class="num">${i + 1}</div><div><h3>${t.title}</h3><p>${t.body}</p><p class="so"><b>So what:</b> ${t.so}</p></div></div>`)
+    .map((t, i) => `<div class="card take"><div class="num">${i + 1}</div><div><h3>${t.title}</h3>${t.tag}<p>${t.body}</p><p class="so"><b>So what:</b> ${t.so}</p></div></div>`)
     .join("");
 
   const N = I.not_solid, T = N.tests;

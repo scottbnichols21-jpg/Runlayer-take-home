@@ -68,6 +68,10 @@
   .take h3 { font-size: 16px; margin: 2px 0 6px; line-height: 1.3; }
   .take p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
   .take .so { margin-top: 8px; color: var(--ink); font-size: 14px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; line-height: 1.4; padding: 2px 9px; border-radius: 999px; margin: 0 0 8px; }
+  .tag.solid { background: var(--blue-wash); color: var(--blue-dark); }
+  .tag.borderline { background: var(--warn-wash); color: #7a4f00; }
+  .tag.chance { background: #eeeeea; color: var(--ink-2); }
   .take .so b { color: var(--blue-dark); }
 
   /* Not solid */
@@ -206,7 +210,7 @@
 
   <header>
     <p class="eyebrow">Acme · Where pipeline and revenue come from</p>
-    <h1>Referrals and events convert best. Paid social and syndication barely produce pipeline.</h1>
+    <h1 id="headline">Referrals and events convert best. Paid Social and Content Syndication bring 27% of leads and one won deal.</h1>
     <p class="sub" id="header-sub"></p>
     <ul class="asof" id="asof"></ul>
   </header>
@@ -216,7 +220,7 @@
 
   <section>
     <h2>What leadership should know</h2>
-    <p class="section-sub">Four takeaways, in order of how much they should change what we do next.</p>
+    <p class="section-sub">Four takeaways, in order of how much they should change what we do next, each tagged with how solid the evidence is.</p>
     <div class="takeaways" id="takeaways"></div>
     <div class="card caveats">
       <h3>Looks striking, but isn't solid enough to act on</h3>
@@ -341,6 +345,7 @@
         <dt>Won / 100 leads</dt><dd>Closed-won deals ÷ leads created × 100. Doesn't depend on deal amounts.</dd>
         <dt>Win rate</dt><dd>Closed won ÷ (closed won + closed lost). Open deals are excluded.</dd>
         <dt>Revenue</dt><dd>Sum of closed-won deal amounts, after the 100× correction, as of the last close date in the export.</dd>
+        <dt>Evidence tags</dt><dd>Solid: the key gap would rarely appear by chance (p &lt; 0.01). Borderline: p between 0.01 and 0.1. Could be chance: p of 0.1 or more. Hover a tag to see the test.</dd>
         <dt>Significance</dt><dd>A green ▲ or red ▼ means a two-sided Fisher exact test against all other leads clears 0.05 divided by the number of rows in that table. p-values in the text are shown to two significant figures.</dd>
         <dt>Revenue per lead</dt><dd>Closed-won revenue ÷ leads created. Understated overall, because many 2026 leads are still open pipeline.</dd>
         <dt>Pipeline created</dt><dd>Amounts on every opportunity, including those later lost.</dd>

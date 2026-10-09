@@ -1390,6 +1390,7 @@ window.DATA = {
  "insights": {
   "referral": {
    "lead_to_opp_rest": 9.2854,
+   "lead_to_opp_p": 7.2e-19,
    "rev_per_lead_multiple": 4.8,
    "win_rate_rest": 32.3699,
    "win_rate_p": 0.17,
@@ -1408,6 +1409,7 @@ window.DATA = {
    "opps": 15,
    "lead_to_opp": 2.2091,
    "lead_to_opp_rest": 14.3328,
+   "lead_to_opp_p": 3e-22,
    "won": 1,
    "closed": 10,
    "revenue": 9900.0,
@@ -1531,6 +1533,11 @@ window.DATA = {
      "p": 0.0085
     }
    ]
+  },
+  "stalled": {
+   "mql": 705,
+   "sql": 180,
+   "mql_unowned": 705
   }
  },
  "quality": [
@@ -1573,8 +1580,8 @@ window.DATA = {
   {
    "issue": "No outcome for leads that stall",
    "count": 885,
-   "detail": "705 MQLs never became SQLs and 180 SQLs never became opportunities. 882 of these 885 have waited longer than any lead ever took to advance (30 days MQL to SQL, 20 days SQL to opportunity), yet the export has no rejected or recycled status for them. 'Disqualified' is only ever used before MQL (192 leads).",
-   "action": "Shown as 'did not advance', not as active pipeline. Worth checking whether Sales records a disposition anywhere."
+   "detail": "705 MQLs never became SQLs and 180 SQLs never became opportunities. 882 of these 885 have waited longer than any lead ever took to advance (30 days MQL to SQL, 20 days SQL to opportunity), yet the export has no rejected or recycled status for them. Owner is only filled in once a lead reaches SQL, so none of the 705 stalled MQLs was ever assigned to anyone. 'Disqualified' is only ever used before MQL (192 leads).",
+   "action": "Shown as 'did not advance', not as active pipeline. Worth checking how MQLs are routed, and whether Sales records a disposition anywhere."
   },
   {
    "issue": "Missing industry and UTM medium",
@@ -1605,8 +1612,8 @@ window.DATA = {
   {
    "title": "MQLs with no outcome",
    "owner": "Marketing Ops + SDR lead",
-   "problem": "705 MQLs never became SQLs and 180 SQLs never became opportunities, and none has a rejected or recycled status. There's no way to tell whether Sales turned them down or never followed up.",
-   "fix": "An MQL follow-up SLA, a required reason whenever Sales rejects a lead, and automatic recycling to nurture after 30 days without progress (no MQL in this data advanced later than that)."
+   "problem": "705 MQLs never became SQLs and 180 SQLs never became opportunities, and none has a rejected or recycled status. Owner is only filled in at SQL, so none of the 705 stalled MQLs was ever assigned to a person. That looks like a routing gap more than Sales turning them down.",
+   "fix": "Assign an owner the moment a lead becomes an MQL, then an MQL follow-up SLA, a required reason whenever Sales rejects a lead, and automatic recycling to nurture after 30 days without progress (no MQL in this data advanced later than that)."
   },
   {
    "title": "Expected close dates left to lapse",
